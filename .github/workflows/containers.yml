@@ -1,0 +1,43 @@
+# untested, please treat as a starting point
+name: Containers
+on:
+  push:
+    branches:
+      - master
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    # https://github.com/google-github-actions/auth
+    # https://github.com/google-github-actions/setup-gcloud
+    # https://cloud.google.com/iam/docs/workload-identity-federation
+
+    # Add "id-token" with the intended permissions.
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - id: 'auth'
+      uses: 'google-github-actions/auth@v0'
+      with:
+        workload_identity_provider: 'projects/123456789/locations/global/workloadIdentityPools/my-pool/providers/my-provider'
+        service_account: 'my-service-account@my-project.iam.gserviceaccount.com'
+
+    - name: 'Set up Cloud SDK'
+      uses: 'google-github-actions/setup-gcloud@v0'
+
+    - name: 'Use gcloud CLI'
+      run: 'gcloud info'
+
+
+    - name: gcloud Docker credential helper
+      run: gcloud auth configure-docker
+
+    - name: Build docker image
+      run:  docker build -t eu.gcr.io/${{ secrets.GCP_PROJECT_ID }}/tornado-poc:latest .
+
+    - name: Push to Google Container Registry
+      run:  docker push eu.gcr.io/${{ secrets.GCP_PROJECT_ID }}/tornado-poc:latest
